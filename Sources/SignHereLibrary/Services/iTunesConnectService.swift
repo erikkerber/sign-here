@@ -510,7 +510,7 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
             if responseBody.contains("ENTITY_ERROR.ATTRIBUTE.INVALID") {
                 throw Error.unableToRegisterDevice(string: "Your udid is an invalid value, try again with a different one!")}
             else {
-                throw Error.unableToRegisterDevice(string: "Awesome this device is already registered under " + name + ", you are good to go!") }
+                throw Error.unableToRegisterDevice(string: "Awesome this device is already registered, you are good to go!") }
         }
         else if tuple.statusCode == 400{
             throw Error.unableToRegisterDevice(string: "The request is invalid and cannot be accepted.")
@@ -524,13 +524,6 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
         }
 
     }
-
-
-
-        
-
-
-
 
 
 
