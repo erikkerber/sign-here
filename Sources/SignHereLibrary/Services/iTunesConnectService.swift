@@ -508,7 +508,11 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
 
         if tuple.statusCode == 409 {
             if responseBody.contains("ENTITY_ERROR.ATTRIBUTE.INVALID") {
-                throw Error.unableToRegisterDevice(string: "Your udid is an invalid value, try again with a different one!")}
+                if responseBody.contains("platform"){
+                    throw Error.unableToRegisterDevice(string: "Your platform name is an invalid value, try again with either IOS or MAC_OS!")}
+                else {
+                    throw Error.unableToRegisterDevice(string: "Your udid is an invalid value, try again with a different one!")}
+            }
             else {
                 throw Error.unableToRegisterDevice(string: "Awesome this device is already registered, you are good to go!") }
         }
@@ -518,7 +522,7 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
         else if tuple.statusCode == 403{
             throw Error.unableToRegisterDevice(string: "The request is not allowed. This can happen if your API key is revoked, your token is incorrectly formatted, or if the requested operation is not allowed.") }
         
-        guard tuple.statusCode == 201
+        guard tuple.statusCode == 201 
         else {
             throw Error.unableToRegisterDevice(string: error)
         }
