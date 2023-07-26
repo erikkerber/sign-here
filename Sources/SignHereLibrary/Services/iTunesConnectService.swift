@@ -248,7 +248,7 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
         urlComponents.path = "/v1/bundleIds"
         urlComponents.queryItems = [
             .init(name: "filter[identifier]", value: bundleIdentifier),
-            .init(name: "filter[platform]", value: "IOS"),
+            .init(name: "filter[platform]", value: "IOS"),                         //is this to keep as IOS? 
             .init(name: "limit", value: "200")
         ]
         guard let url: URL = urlComponents.url
@@ -277,7 +277,7 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
             let listBundleIDsResponse: ListBundleIDsResponse = try createITCApiJSONDecoder().decode(ListBundleIDsResponse.self, from: data)
             guard let bundleIdITCId: String = listBundleIDsResponse.data.compactMap({ bundleData in
                 guard bundleData.attributes.identifier == bundleIdentifier,
-                    bundleData.attributes.platform == "IOS"
+                    bundleData.attributes.platform == "IOS"                              //same here, is this only for ios? 
                 else {
                     return nil
                 }

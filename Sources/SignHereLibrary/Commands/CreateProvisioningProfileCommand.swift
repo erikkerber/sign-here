@@ -30,14 +30,14 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
         case unableToBase64DecodeCertificate(displayName: String)
         case unableToCreatePEM(output: ShellOutput)
         case unableToBase64DecodeProfile(name: String)
-        case unableToUpdateKeychainPartitionList(keychainName: String, output: ShellOutput)
-        case unableToImportP12IdentityIntoKeychain(
-            keychainName: String,
-            p12Identity: Path,
-            output: ShellOutput
-        )
+    //    case unableToUpdateKeychainPartitionList(keychainName: String, output: ShellOutput)
+        // case unableToImportP12IdentityIntoKeychain(
+        //     keychainName: String,
+        //     p12Identity: Path,
+        //     output: ShellOutput
+        // )
         case unableToCreateCSR(output: ShellOutput)
-        case unableToImportIntermediaryAppleCertificate(certificate: String, output: ShellOutput)
+      //  case unableToImportIntermediaryAppleCertificate(certificate: String, output: ShellOutput)
 
         var description: String {
             switch self {
@@ -69,38 +69,38 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
                     [CreateProvisioningProfileCommand] Unable to base 64 decode profile
                     - Profile name: \(name)
                     """
-                case let .unableToUpdateKeychainPartitionList(keychainName: keychainName, output: output):
-                    return """
-                    [CreateProvisioningProfileCommand] Unable to update keychain partition list
-                    - Keychain Name: \(keychainName)
-                    - Output: \(output.outputString)
-                    - Error: \(output.errorString)
-                    """
-                case let .unableToImportP12IdentityIntoKeychain(
-                    keychainName: keychainName,
-                    p12Identity: p12Identity,
-                    output: output
-                ):
-                    return """
-                    [CreateProvisioningProfileCommand] Unable to import P12 identity into keychain
-                    - Keychain Name: \(keychainName)
-                    - P12 Identity: \(p12Identity)
-                    - Output: \(output.outputString)
-                    - Error: \(output.errorString)
-                    """
+                // case let .unableToUpdateKeychainPartitionList(keychainName: keychainName, output: output):
+                //     return """
+                //     [CreateProvisioningProfileCommand] Unable to update keychain partition list
+                //     - Keychain Name: \(keychainName)
+                //     - Output: \(output.outputString)
+                //     - Error: \(output.errorString)
+                //     """
+                // case let .unableToImportP12IdentityIntoKeychain(
+                //     keychainName: keychainName,
+                //     p12Identity: p12Identity,
+                //     output: output
+                // ):
+                //     return """
+                //     [CreateProvisioningProfileCommand] Unable to import P12 identity into keychain
+                //     - Keychain Name: \(keychainName)
+                //     - P12 Identity: \(p12Identity)
+                //     - Output: \(output.outputString)
+                //     - Error: \(output.errorString)
+                //     """
                 case let .unableToCreateCSR(output: output):
                     return """
                     [CreateProvisioningProfileCommand] Unable to create certificate signing request
                     - Output: \(output.outputString)
                     - Error: \(output.errorString)
                     """
-                case let .unableToImportIntermediaryAppleCertificate(certificate: certificate, output: output):
-                    return """
-                    [CreateProvisioningProfileCommand] Unable to import Apple Intermediate Certificate
-                    - Certificate: \(certificate)
-                    - Output: \(output.outputString)
-                    - Error: \(output.errorString)
-                    """
+                // case let .unableToImportIntermediaryAppleCertificate(certificate: certificate, output: output):
+                //     return """
+                //     [CreateProvisioningProfileCommand] Unable to import Apple Intermediate Certificate
+                //     - Certificate: \(certificate)
+                //     - Output: \(output.outputString)
+                //     - Error: \(output.errorString)
+                //     """
             }
         }
     }
@@ -110,8 +110,8 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
         case issuerID = "issuerID"
         case privateKeyPath = "privateKeyPath"
         case itunesConnectKeyPath = "itunesConnectKeyPath"
-        case keychainName = "keychainName"
-        case keychainPassword = "keychainPassword"
+        // case keychainName = "keychainName"
+        // case keychainPassword = "keychainPassword"
         case bundleIdentifier = "bundleIdentifier"
         case bundleIdentifierName = "bundleIdentifierName"
         case profileType = "profileType"
@@ -134,11 +134,11 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
     @Option(help: "The path to the private key (https://developer.apple.com/documentation/appstoreconnectapi/generating_tokens_for_api_requests)")
     internal var itunesConnectKeyPath: String
 
-    @Option(help: "The name of the keychain to use to store fetched identities")
-    internal var keychainName: String
+    // @Option(help: "The name of the keychain to use to store fetched identities")
+    // internal var keychainName: String
 
-    @Option(help: "The password of the keychain specified by --keychain-name")
-    internal var keychainPassword: String
+    // @Option(help: "The password of the keychain specified by --keychain-name")
+    // internal var keychainPassword: String
 
     @Option(help: "The bundle identifier of the app for which you want to generate a provisioning profile for")
     internal var bundleIdentifier: String
@@ -209,8 +209,6 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
         issuerID: String,
         privateKeyPath: String,
         itunesConnectKeyPath: String,
-        keychainName: String,
-        keychainPassword: String,
         bundleIdentifier: String,
         profileType: String,
         certificateType: String,
@@ -230,8 +228,8 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
         self.issuerID = issuerID
         self.privateKeyPath = privateKeyPath
         self.itunesConnectKeyPath = itunesConnectKeyPath
-        self.keychainName = keychainName
-        self.keychainPassword = keychainPassword
+        // self.keychainName = keychainName
+        // self.keychainPassword = keychainPassword
         self.bundleIdentifier = bundleIdentifier
         self.profileType = profileType
         self.certificateType = certificateType
@@ -263,8 +261,8 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
             issuerID: try container.decode(String.self, forKey: .issuerID),
             privateKeyPath: try container.decode(String.self, forKey: .privateKeyPath),
             itunesConnectKeyPath: try container.decode(String.self, forKey: .itunesConnectKeyPath),
-            keychainName: try container.decode(String.self, forKey: .keychainName),
-            keychainPassword: try container.decode(String.self, forKey: .keychainPassword),
+            // keychainName: try container.decode(String.self, forKey: .keychainName),
+            // keychainPassword: try container.decode(String.self, forKey: .keychainPassword),
             bundleIdentifier: try container.decode(String.self, forKey: .bundleIdentifier),
             profileType: try container.decode(String.self, forKey: .profileType),
             certificateType: try container.decode(String.self, forKey: .certificateType),
@@ -276,6 +274,7 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
         )
     }
 
+    //creating the p12 identity (certificates) or importing it based on shared certificate
     internal func run() throws {
         let privateKey: Path = .init(privateKeyPath)
         let csr: Path = try createCSR(privateKey: privateKey)
@@ -285,18 +284,18 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
             secretKey: try files.read(Path(itunesConnectKeyPath))
         )
         let tuple: (cer: Path, certificateId: String) = try fetchOrCreateCertificate(jsonWebToken: jsonWebToken, csr: csr)
-        let cer: Path = tuple.cer
+        // let cer: Path = tuple.cer
         let certificateId: String = tuple.certificateId
-        let pem: Path = try createPEM(cer: cer)
-        let identityPassword: String = uuid.make()
-        let p12Identity: Path = try createP12Identity(
-            pem: pem,
-            privateKey: privateKey,
-            identityPassword: identityPassword
-        )
-        try importP12IdentityIntoKeychain(p12Identity: p12Identity, identityPassword: identityPassword)
-        try importIntermediaryAppleCertificates()
-        try updateKeychainPartitionList()
+        // let pem: Path = try createPEM(cer: cer)
+        // let identityPassword: String = uuid.make()
+        // let p12Identity: Path = try createP12Identity(
+        //     pem: pem,
+        //     privateKey: privateKey,
+        //     identityPassword: identityPassword
+        // )
+   //     try importP12IdentityIntoKeychain(p12Identity: p12Identity, identityPassword: identityPassword)
+   //     try importIntermediaryAppleCertificates()
+   //     try updateKeychainPartitionList()
         let deviceIDs: Set<String> = try iTunesConnectService.fetchITCDeviceIDs(jsonWebToken: jsonWebToken)
         let profileResponse: CreateProfileResponse = try iTunesConnectService.createProfile(
             jsonWebToken: jsonWebToken,
@@ -415,63 +414,63 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
         return p12Output
     }
 
-    private func importP12IdentityIntoKeychain(p12Identity: Path, identityPassword: String) throws {
-        let output: ShellOutput = shell.execute([
-            "security",
-            "import",
-            p12Identity.string,
-            "-k",
-            keychainName,
-            "-P",
-            identityPassword,
-            "-T",
-            "/usr/bin/codesign"
-        ])
-        guard output.isSuccessful
-        else {
-           throw Error.unableToImportP12IdentityIntoKeychain(
-               keychainName: keychainName,
-               p12Identity: p12Identity,
-               output: output
-           )
-        }
-    }
+//     private func importP12IdentityIntoKeychain(p12Identity: Path, identityPassword: String) throws {
+//         let output: ShellOutput = shell.execute([
+//             "security",
+//             "import",
+//             p12Identity.string,
+//             "-k",
+//             keychainName,
+//             "-P",
+//             identityPassword,
+//             "-T",
+//             "/usr/bin/codesign"
+//         ])
+//         guard output.isSuccessful
+//         else {
+//            throw Error.unableToImportP12IdentityIntoKeychain(
+//                keychainName: keychainName,
+//                p12Identity: p12Identity,
+//                output: output
+//            )
+//         }
+//     }
 
-    private func importIntermediaryAppleCertificates() throws {
-        for cert in intermediaryAppleCertificates {
-            let output: ShellOutput = shell.execute([
-                "security",
-                "import",
-                cert,
-                "-k",
-                keychainName,
-                "-T",
-                "/usr/bin/codesign"
-            ])
-            guard output.isSuccessful
-            else {
-                throw Error.unableToImportIntermediaryAppleCertificate(certificate: cert, output: output)
-            }
-        }
-    }
+//     private func importIntermediaryAppleCertificates() throws {
+//         for cert in intermediaryAppleCertificates {
+//             let output: ShellOutput = shell.execute([
+//                 "security",
+//                 "import",
+//                 cert,
+//                 "-k",
+//                 keychainName,
+//                 "-T",
+//                 "/usr/bin/codesign"
+//             ])
+//             guard output.isSuccessful
+//             else {
+//                 throw Error.unableToImportIntermediaryAppleCertificate(certificate: cert, output: output)
+//             }
+//         }
+//     }
 
-    private func updateKeychainPartitionList() throws {
-        let output: ShellOutput = shell.execute([
-            "security",
-            "set-key-partition-list",
-            "-S",
-            "apple-tool:,apple:,codesign:",
-            "-s",
-            "-k",
-            keychainPassword,
-            keychainName
-        ])
-        guard output.isSuccessful
-        else {
-           throw Error.unableToUpdateKeychainPartitionList(
-               keychainName: keychainName,
-               output: output
-           )
-        }
-    }
-}
+//     private func updateKeychainPartitionList() throws {
+//         let output: ShellOutput = shell.execute([
+//             "security",
+//             "set-key-partition-list",
+//             "-S",
+//             "apple-tool:,apple:,codesign:",
+//             "-s",
+//             "-k",
+//             keychainPassword,
+//             keychainName
+//         ])
+//         guard output.isSuccessful
+//         else {
+//            throw Error.unableToUpdateKeychainPartitionList(
+//                keychainName: keychainName,
+//                output: output
+//            )
+//         }
+//     }
+ }
