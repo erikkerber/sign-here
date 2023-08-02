@@ -252,7 +252,7 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
             }
             try files.write(profileData, to: .init(outputPath))
          //   log.append(profileResponse.data.id)
-            log.append(profileResponse)
+            log.append(profileData)
         }
     }
 
