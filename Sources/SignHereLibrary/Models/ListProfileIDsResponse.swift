@@ -1,8 +1,8 @@
 //
-//  ListDevicesResponse.swift
+//  ListProfileIDsResponse.swift
 //  Models
 //
-//  Created by Maxwell Elliott on 04/04/23.
+//  Created by Pranavi Gupta on 08/04/23.
 //
 
 import Foundation
