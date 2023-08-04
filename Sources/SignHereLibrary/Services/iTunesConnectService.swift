@@ -421,6 +421,53 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
         }
     }
 
+
+    func fetchProfileIdsfromBundleIds(
+        jsonWebToken: String,
+        id: String     
+    ) throws -> Set<String> {
+        var urlComponents: URLComponents = .init()
+        urlComponents.scheme = Constants.httpsScheme
+        urlComponents.host = Constants.itcHost
+        urlComponents.path = "/v1/profiles/\(id)/profiles"
+        urlComponents.queryItems = [
+            .init(name: "fields[profiles]", value: id),
+        ]
+        guard let url: URL = urlComponents.url
+        else {
+            throw Error.unableToCreateURL(urlComponents: urlComponents)
+        }
+        var request: URLRequest = .init(url: url)
+        request.setValue("Bearer \(jsonWebToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(Constants.applicationJSONHeaderValue, forHTTPHeaderField: "Accept")
+        request.setValue(Constants.applicationJSONHeaderValue, forHTTPHeaderField: Constants.contentTypeHeaderName)
+        request.httpMethod = "GET"
+        let jsonDecoder: JSONDecoder = createITCApiJSONDecoder()
+        let tuple: (data: Data, _, statusCode: Int) = try network.executeWithStatusCode(request: request)
+        guard tuple.statusCode == 200
+        else {
+            throw Error.unableToDeleteProvisioningProfile(id: id, responseData: tuple.data)
+        }
+        do {
+            var response: ListProfileIDsResponse = try jsonDecoder.decode(
+                ListProfileIDsResponse.self,
+                from: tuple.data
+            )
+            var profileData: [ListProfileIDsResponse.Profile] = response.data
+            while let next: String = response.links.next,
+                let nextURL: URL = .init(string: next) {
+                response = try performPagedRequest(url: nextURL, jsonWebToken: jsonWebToken)
+                profileData.append(contentsOf: response.data)
+            }
+            return .init(profileData.map { profile in
+                profile.id
+            })
+        } catch let decodingError as DecodingError {
+            throw Error.unableToDecodeResponse(responseData: tuple.data, decodingError: decodingError)
+        }
+    }
+
+
     func deleteProvisioningProfile(
         jsonWebToken: String,
         id: String

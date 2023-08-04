@@ -100,7 +100,7 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
     internal var itunesConnectKeyPath: String
 
     @Option(help: "The bundle identifier of the app for which you want to generate a provisioning profile for")
-    internal var bundleIdentifier: [String]
+    internal var bundleIdentifier: String
 
     @Option(help: "The bundle identifier name for the desired bundle identifier, this is optional but if it is not set the logic will select the first bundle id it finds that matches `--bundle-identifier`")
     internal var bundleIdentifierName: String?
@@ -165,7 +165,7 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
         issuerID: String,
         privateKeyPath: String,
         itunesConnectKeyPath: String,
-        bundleIdentifier:[String],
+        bundleIdentifier: String,
         profileType: String,
         certificateType: String,
         outputPath: String,
@@ -213,7 +213,7 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
             issuerID: try container.decode(String.self, forKey: .issuerID),
             privateKeyPath: try container.decode(String.self, forKey: .privateKeyPath),
             itunesConnectKeyPath: try container.decode(String.self, forKey: .itunesConnectKeyPath),
-            bundleIdentifier: try container.decode([String].self, forKey: .bundleIdentifier),
+            bundleIdentifier: try container.decode(String.self, forKey: .bundleIdentifier),
             profileType: try container.decode(String.self, forKey: .profileType),
             certificateType: try container.decode(String.self, forKey: .certificateType),
             outputPath: try container.decode(String.self, forKey: .outputPath),
@@ -234,26 +234,26 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
         let tuple: (cer: Path, certificateId: String) = try fetchOrCreateCertificate(jsonWebToken: jsonWebToken, csr: csr)
         let certificateId: String = tuple.certificateId
         let deviceIDs: Set<String> = try iTunesConnectService.fetchITCDeviceIDs(jsonWebToken: jsonWebToken)
-        for id in bundleIdentifier {
-            let profileResponse: CreateProfileResponse = try iTunesConnectService.createProfile(
+        let profileResponse: CreateProfileResponse = try iTunesConnectService.createProfile(
+            jsonWebToken: jsonWebToken,
+            bundleId: try iTunesConnectService.determineBundleIdITCId(
                 jsonWebToken: jsonWebToken,
-                bundleId: try iTunesConnectService.determineBundleIdITCId(
-                    jsonWebToken: jsonWebToken,
-                    bundleIdentifier: id,
-                    bundleIdentifierName: bundleIdentifierName
-                ),
-                certificateId: certificateId,
-                deviceIDs: deviceIDs,
-                profileType: profileType
-            )
-            guard let profileData: Data = .init(base64Encoded: profileResponse.data.attributes.profileContent)
-            else {
-                throw Error.unableToBase64DecodeProfile(name: profileResponse.data.attributes.name)
-            }
-            try files.write(profileData, to: .init(outputPath))
-         //   log.append(profileResponse.data.id)
-            log.append(profileResponse)
+                bundleIdentifier: bundleIdentifier,
+                bundleIdentifierName: bundleIdentifierName
+            ),
+            certificateId: certificateId,
+            deviceIDs: deviceIDs,
+            profileType: profileType
+        )
+        guard let profileData: Data = .init(base64Encoded: profileResponse.data.attributes.profileContent)
+        else {
+            throw Error.unableToBase64DecodeProfile(name: profileResponse.data.attributes.name)
         }
+        try files.write(profileData, to: .init(outputPath))
+        log.append("cer: " + certificateId)
+        log.append("uuid: " +  profileResponse.data.attributes.uuid)
+        log.append("profileContent: " + profileResponse.data.attributes.profileContent)
+        
     }
 
     private func createCSR(privateKey: Path) throws -> Path {
