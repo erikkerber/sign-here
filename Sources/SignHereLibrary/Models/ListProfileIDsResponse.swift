@@ -14,10 +14,10 @@ internal struct ListProfileIDsResponse: Codable {
             var platform: String
             var profileContent: String
             var uuid: String
-            var createdDate: Date
+            var createdDate: Date?
             var profileState: String
             var profileType: String
-            var expirationDate: Date
+            var expirationDate: Date?
         }
 
         var id: String

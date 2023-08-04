@@ -21,6 +21,8 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
 
     private enum CodingKeys: String, CodingKey {
         case provisioningProfileId = "provisioningProfileId"
+        case bundleIdentifier = "bundleIdentifier"
+        case bundleIdentifierName = "bundleIdentifierName"
         case keyIdentifier = "keyIdentifier"
         case issuerID = "issuerID"
         case itunesConnectKeyPath = "itunesConnectKeyPath"
@@ -28,6 +30,12 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
 
     @Option(help: "The iTunes Connect API ID of the provisioning profile to delete (https://developer.apple.com/documentation/appstoreconnectapi/profile)")
     internal var provisioningProfileId: String
+
+    @Option(help: "The bundle identifier of the app for which you want to delete a provisioning profile for")
+    internal var bundleIdentifier: String
+
+    @Option(help: "The bundle identifier name for the desired bundle identifier, this is optional but if it is not set the logic will select the first bundle id it finds that matches `--bundle-identifier`")
+    internal var bundleIdentifierName: String?
 
     @Option(help: "The key identifier of the private key (https://developer.apple.com/documentation/appstoreconnectapi/generating_tokens_for_api_requests)")
     internal var keyIdentifier: String
@@ -59,17 +67,21 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
         jsonWebTokenService: JSONWebTokenService,
         iTunesConnectService: iTunesConnectService,
         provisioningProfileId: String,
+        bundleIdentifier: String,   
         keyIdentifier: String,
         issuerID: String,
-        itunesConnectKeyPath: String
+        itunesConnectKeyPath: String,
+        bundleIdentifierName: String?
     ) {
         self.files = files
         self.jsonWebTokenService = jsonWebTokenService
         self.iTunesConnectService = iTunesConnectService
         self.provisioningProfileId = provisioningProfileId
+        self.bundleIdentifier = bundleIdentifier
         self.keyIdentifier = keyIdentifier
         self.issuerID = issuerID
         self.itunesConnectKeyPath = itunesConnectKeyPath
+        self.bundleIdentifierName = bundleIdentifierName
     }
 
     internal init(from decoder: Decoder) throws {
@@ -85,9 +97,11 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
                 clock: ClockImp()
             ),
             provisioningProfileId: try container.decode(String.self, forKey: .provisioningProfileId),
+            bundleIdentifier: try container.decode(String.self, forKey: .bundleIdentifier),
             keyIdentifier: try container.decode(String.self, forKey: .keyIdentifier),
             issuerID: try container.decode(String.self, forKey: .issuerID),
-            itunesConnectKeyPath: try container.decode(String.self, forKey: .itunesConnectKeyPath)
+            itunesConnectKeyPath: try container.decode(String.self, forKey: .itunesConnectKeyPath),
+            bundleIdentifierName: try container.decodeIfPresent(String.self, forKey: .bundleIdentifierName)
         )
     }
 
@@ -97,9 +111,20 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
             issuerID: issuerID,
             secretKey: try files.read(Path(itunesConnectKeyPath))
         )
-        try iTunesConnectService.deleteProvisioningProfile(
-            jsonWebToken: jsonWebToken,
-            id: provisioningProfileId
-        )
+        let profileIDs: Set<String> =
+            try iTunesConnectService.fetchProfileIdsfromBundleIds(
+                jsonWebToken: jsonWebToken,  
+                id: try iTunesConnectService.determineBundleIdITCId(
+                        jsonWebToken: jsonWebToken,
+                        bundleIdentifier: bundleIdentifier,
+                        bundleIdentifierName: bundleIdentifierName
+                    )
+            )
+        for profile in profileIDs {
+            try iTunesConnectService.deleteProvisioningProfile(
+                jsonWebToken: jsonWebToken,
+                id: profile        
+            )
+        }
     }
 }

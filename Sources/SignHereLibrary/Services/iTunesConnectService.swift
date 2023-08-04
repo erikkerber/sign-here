@@ -39,6 +39,10 @@ internal protocol iTunesConnectService {
         deviceIDs: Set<String>,
         profileType: String
     ) throws -> CreateProfileResponse
+    func fetchProfileIdsfromBundleIds(
+        jsonWebToken: String,
+        id: String
+    ) throws -> Set<String>
     func deleteProvisioningProfile(
         jsonWebToken: String,
         id: String
@@ -248,7 +252,7 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
         urlComponents.path = "/v1/bundleIds"
         urlComponents.queryItems = [
             .init(name: "filter[identifier]", value: bundleIdentifier),
-            .init(name: "filter[platform]", value: "IOS"),                         //is this to keep as IOS? 
+            .init(name: "filter[platform]", value: "IOS"),                         
             .init(name: "limit", value: "200")
         ]
         guard let url: URL = urlComponents.url
@@ -429,10 +433,10 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
         var urlComponents: URLComponents = .init()
         urlComponents.scheme = Constants.httpsScheme
         urlComponents.host = Constants.itcHost
-        urlComponents.path = "/v1/profiles/\(id)/profiles"
-        urlComponents.queryItems = [
-            .init(name: "fields[profiles]", value: id),
-        ]
+        urlComponents.path = "/v1/bundleIds/\(id)/profiles"
+        // urlComponents.queryItems = [
+        //     .init(name: "fields[profiles]", value: id),
+        // ]
         guard let url: URL = urlComponents.url
         else {
             throw Error.unableToCreateURL(urlComponents: urlComponents)
