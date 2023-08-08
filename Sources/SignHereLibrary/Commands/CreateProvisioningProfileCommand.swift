@@ -230,6 +230,15 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
             issuerID: issuerID,
             secretKey: try files.read(Path(itunesConnectKeyPath))
         )
+        let fileManager = FileManager.default
+        do{
+            if !fileManager.fileExists(atPath: outputPath) {
+                try fileManager.createDirectory(atPath: outputPath, withIntermediateDirectories: true, attributes: nil)
+        }
+        } catch {
+            print("Error: \(error)")
+        }
+
         let tuple: (cer: Path, certificateId: String) = try fetchOrCreateCertificate(jsonWebToken: jsonWebToken, csr: csr, outputPath: outputPath)
         let certificateId: String = tuple.certificateId
         let deviceIDs: Set<String> = try iTunesConnectService.fetchITCDeviceIDs(jsonWebToken: jsonWebToken)
@@ -249,17 +258,17 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
             throw Error.unableToBase64DecodeProfile(name: profileResponse.data.attributes.name)
         }
 
-        let fileManager = FileManager.default
+    //    let fileManager = FileManager.default
         let filePath = "\(outputPath)/\(profileResponse.data.attributes.uuid).mobileprovision"
         print(filePath)
-        do{
-            if !fileManager.fileExists(atPath: outputPath) {
-                try fileManager.createDirectory(atPath: outputPath, withIntermediateDirectories: true, attributes: nil)
-        }
+        // do{
+        //     if !fileManager.fileExists(atPath: outputPath) {
+        //         try fileManager.createDirectory(atPath: outputPath, withIntermediateDirectories: true, attributes: nil)
+        // }
         try files.write(profileData, to: .init(filePath))
-        } catch {
-            print("Error: \(error)")
-        }
+        // } catch {
+        //     print("Error: \(error)")
+        // }
         // let newPath: String = outputPath + profileResponse.data.attributes.uuid + ".mobileprovision" 
         // print(newPath)
         // try files.write(profileData, to: .init(newPath))
@@ -306,8 +315,9 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
                 throw Error.unableToBase64DecodeCertificate(displayName: fetchedActiveCertificate.attributes.displayName)
             }
             cer = try files.uniqueTemporaryPath() + "\(fetchedActiveCertificate.id).cer"
-            try files.write(data, to: cer)
             certificateId = fetchedActiveCertificate.id
+            let filePath = "\(outputPath)/\(certificateId).cer"
+            try files.write(data, to: .init(filePath))
         } else {
             let createCertificateResponse: CreateCertificateResponse = try iTunesConnectService.createCertificate(
                 jsonWebToken: jsonWebToken,
@@ -321,7 +331,8 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
             cer = try files.uniqueTemporaryPath() + "\(createCertificateResponse.data.id).cer"
             try files.write(cerData, to: cer)
             certificateId = createCertificateResponse.data.id
-            try files.write(cerData, to: .init(outputPath + certificateId + ".cer"))
+            let filePath = "\(outputPath)/\(certificateId).cer"
+            try files.write(cerData, to: .init(filePath))
         }
         return (cer: cer, certificateId: certificateId)
     }
