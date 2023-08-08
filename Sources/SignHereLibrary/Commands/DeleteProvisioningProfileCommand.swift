@@ -20,16 +20,12 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
               """)
 
     private enum CodingKeys: String, CodingKey {
-        case provisioningProfileId = "provisioningProfileId"
         case bundleIdentifier = "bundleIdentifier"
         case bundleIdentifierName = "bundleIdentifierName"
         case keyIdentifier = "keyIdentifier"
         case issuerID = "issuerID"
         case itunesConnectKeyPath = "itunesConnectKeyPath"
     }
-
-    @Option(help: "The iTunes Connect API ID of the provisioning profile to delete (https://developer.apple.com/documentation/appstoreconnectapi/profile)")
-    internal var provisioningProfileId: String
 
     @Option(help: "The bundle identifier of the app for which you want to delete a provisioning profile for")
     internal var bundleIdentifier: String
@@ -66,7 +62,6 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
         files: Files,
         jsonWebTokenService: JSONWebTokenService,
         iTunesConnectService: iTunesConnectService,
-        provisioningProfileId: String,
         bundleIdentifier: String,   
         keyIdentifier: String,
         issuerID: String,
@@ -76,7 +71,6 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
         self.files = files
         self.jsonWebTokenService = jsonWebTokenService
         self.iTunesConnectService = iTunesConnectService
-        self.provisioningProfileId = provisioningProfileId
         self.bundleIdentifier = bundleIdentifier
         self.keyIdentifier = keyIdentifier
         self.issuerID = issuerID
@@ -96,7 +90,6 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
                 shell: ShellImp(),
                 clock: ClockImp()
             ),
-            provisioningProfileId: try container.decode(String.self, forKey: .provisioningProfileId),
             bundleIdentifier: try container.decode(String.self, forKey: .bundleIdentifier),
             keyIdentifier: try container.decode(String.self, forKey: .keyIdentifier),
             issuerID: try container.decode(String.self, forKey: .issuerID),

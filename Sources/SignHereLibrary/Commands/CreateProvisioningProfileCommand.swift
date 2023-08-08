@@ -9,7 +9,6 @@ import ArgumentParser
 import CoreLibrary
 import Foundation
 import PathKit
-//import DeleteProvisioningProfileCommand
 
 internal struct CreateProvisioningProfileCommand: ParsableCommand {
 
@@ -231,7 +230,7 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
             issuerID: issuerID,
             secretKey: try files.read(Path(itunesConnectKeyPath))
         )
-        let tuple: (cer: Path, certificateId: String) = try fetchOrCreateCertificate(jsonWebToken: jsonWebToken, csr: csr)
+        let tuple: (cer: Path, certificateId: String) = try fetchOrCreateCertificate(jsonWebToken: jsonWebToken, csr: csr, outputPath: outputPath)
         let certificateId: String = tuple.certificateId
         let deviceIDs: Set<String> = try iTunesConnectService.fetchITCDeviceIDs(jsonWebToken: jsonWebToken)
         let profileResponse: CreateProfileResponse = try iTunesConnectService.createProfile(
@@ -249,7 +248,21 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
         else {
             throw Error.unableToBase64DecodeProfile(name: profileResponse.data.attributes.name)
         }
-        try files.write(profileData, to: .init(outputPath))
+
+        let fileManager = FileManager.default
+        let filePath = "\(outputPath)/\(profileResponse.data.attributes.uuid).mobileprovision"
+        print(filePath)
+        do{
+            if !fileManager.fileExists(atPath: outputPath) {
+                try fileManager.createDirectory(atPath: outputPath, withIntermediateDirectories: true, attributes: nil)
+        }
+        try files.write(profileData, to: .init(filePath))
+        } catch {
+            print("Error: \(error)")
+        }
+        // let newPath: String = outputPath + profileResponse.data.attributes.uuid + ".mobileprovision" 
+        // print(newPath)
+        // try files.write(profileData, to: .init(newPath))
         log.append("cer: " + certificateId)
         log.append("uuid: " +  profileResponse.data.attributes.uuid)
         log.append("profileContent: " + profileResponse.data.attributes.profileContent)
@@ -277,7 +290,8 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
 
     private func fetchOrCreateCertificate(
         jsonWebToken: String,
-        csr: Path
+        csr: Path,
+        outputPath: String
     ) throws -> (cer: Path, certificateId: String) {
         let cer: Path
         let certificateId: String
@@ -307,6 +321,7 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
             cer = try files.uniqueTemporaryPath() + "\(createCertificateResponse.data.id).cer"
             try files.write(cerData, to: cer)
             certificateId = createCertificateResponse.data.id
+            try files.write(cerData, to: .init(outputPath + certificateId + ".cer"))
         }
         return (cer: cer, certificateId: certificateId)
     }
@@ -353,14 +368,5 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
         }
         return p12Output
     }
-
-    // private func deleteOldProfiles(deviceIDS: Set<String>) throw -> Path{
-
-    //     for provisioningprofiles:
-    //         if deviceid is under the provisioningprofile:
-    //             DeleteProvisioningProfileCommand.deleteProvisioningProfile(id)
-
-
-    //  }
 
  }
