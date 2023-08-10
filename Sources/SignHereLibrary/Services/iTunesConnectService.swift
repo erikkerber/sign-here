@@ -39,15 +39,26 @@ internal protocol iTunesConnectService {
         deviceIDs: Set<String>,
         profileType: String
     ) throws -> CreateProfileResponse
+    func fetchProfileIdsfromBundleIds(
+        jsonWebToken: String,
+        id: String
+    ) throws -> Set<String>
     func deleteProvisioningProfile(
         jsonWebToken: String,
         id: String
+    ) throws
+    func registerDevice(
+        jsonWebToken: String,
+        platform: String,
+        name: String,
+        udid: String
     ) throws
 }
 
 internal class iTunesConnectServiceImp: iTunesConnectService {
     enum Error: Swift.Error, CustomStringConvertible {
         case invalidURL(string: String)
+        case unableToRegisterDevice(string: String)
         case unableToCreateURL(urlComponents: URLComponents)
         case unableToDetermineITCIdForBundleId(bundleIdentifier: String)
         case unableToDetermineModulusForCertificate(output: ShellOutput)
@@ -62,6 +73,10 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
                     return """
                     [iTunesConnectServiceImp] Invalid url
                     - url string: \(string)
+                    """
+                case let .unableToRegisterDevice(string: string):
+                    return """
+                    \n\(string)
                     """
                 case let .unableToCreateURL(urlComponents: urlComponents):
                     return """
@@ -237,7 +252,7 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
         urlComponents.path = "/v1/bundleIds"
         urlComponents.queryItems = [
             .init(name: "filter[identifier]", value: bundleIdentifier),
-            .init(name: "filter[platform]", value: "IOS"),
+            .init(name: "filter[platform]", value: "IOS"),                         
             .init(name: "limit", value: "200")
         ]
         guard let url: URL = urlComponents.url
@@ -266,7 +281,7 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
             let listBundleIDsResponse: ListBundleIDsResponse = try createITCApiJSONDecoder().decode(ListBundleIDsResponse.self, from: data)
             guard let bundleIdITCId: String = listBundleIDsResponse.data.compactMap({ bundleData in
                 guard bundleData.attributes.identifier == bundleIdentifier,
-                    bundleData.attributes.platform == "IOS"
+                    bundleData.attributes.platform == "IOS"                              //same here, is this only for ios? 
                 else {
                     return nil
                 }
@@ -410,6 +425,61 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
         }
     }
 
+
+    func fetchProfileIdsfromBundleIds(
+        jsonWebToken: String,
+        id: String     
+    ) throws -> Set<String> {
+        var urlComponents: URLComponents = .init()
+        urlComponents.scheme = Constants.httpsScheme
+        urlComponents.host = Constants.itcHost
+        urlComponents.path = "/v1/bundleIds/\(id)/profiles"
+        // urlComponents.queryItems = [
+        //     .init(name: "filter[profileType]", value: "IOS_DEVELOPMENT"),
+        //     .init(name: "filter[platform]", value: "IOS"),                         
+        //     .init(name: "limit", value: "200")
+        // ]
+        guard let url: URL = urlComponents.url
+        else {
+            throw Error.unableToCreateURL(urlComponents: urlComponents)
+        }
+        var request: URLRequest = .init(url: url)
+        request.setValue("Bearer \(jsonWebToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(Constants.applicationJSONHeaderValue, forHTTPHeaderField: "Accept")
+        request.setValue(Constants.applicationJSONHeaderValue, forHTTPHeaderField: Constants.contentTypeHeaderName)
+        request.httpMethod = "GET"
+        let jsonDecoder: JSONDecoder = createITCApiJSONDecoder()
+        let tuple: (data: Data, _, statusCode: Int) = try network.executeWithStatusCode(request: request)
+        guard tuple.statusCode == 200
+        else {
+            throw Error.unableToDeleteProvisioningProfile(id: id, responseData: tuple.data)
+        }
+        do {
+            var response: ListProfileIDsResponse = try jsonDecoder.decode(
+                ListProfileIDsResponse.self,
+                from: tuple.data
+            )
+            var profileData: [ListProfileIDsResponse.Profile] = response.data
+            while let next: String = response.links.next,
+                let nextURL: URL = .init(string: next) {
+                response = try performPagedRequest(url: nextURL, jsonWebToken: jsonWebToken)
+                // if (response.data[profileType] == "IOS_APP_DEVELOPMENT" || response.data == "IOS_APP_ADHOC" ){
+                //     profileData.append(contentsOf: response.data)
+                // }
+                profileData.append(contentsOf: response.data)
+                profileData = 
+                    profileData.filter { 
+                    profile in 
+                        return profile.attributes.profileType == "IOS_APP_DEVELOPMENT" || profile.attributes.profileType == "IOS_IOS_APP_ADHOC" }
+            }
+            return .init(profileData.map { profile in
+                profile.id
+            })
+        } catch let decodingError as DecodingError {
+            throw Error.unableToDecodeResponse(responseData: tuple.data, decodingError: decodingError)
+        }
+    }
+
     func deleteProvisioningProfile(
         jsonWebToken: String,
         id: String
@@ -433,6 +503,92 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
             throw Error.unableToDeleteProvisioningProfile(id: id, responseData: tuple.data)
         }
     }
+
+    func registerDevice(
+        jsonWebToken: String,
+        platform: String,
+        name: String,
+        udid: String
+    ) 
+    throws {
+        var urlComponents: URLComponents = .init()
+        urlComponents.scheme = Constants.httpsScheme
+        urlComponents.host = Constants.itcHost
+        urlComponents.path = "/v1/devices"
+
+        guard let url: URL = urlComponents.url
+        else {
+            throw Error.unableToCreateURL(urlComponents: urlComponents)
+        }
+
+        var request: URLRequest = .init(url: url)
+        request.setValue("Bearer \(jsonWebToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(Constants.applicationJSONHeaderValue, forHTTPHeaderField: "Accept")
+        request.setValue(Constants.applicationJSONHeaderValue, forHTTPHeaderField: Constants.contentTypeHeaderName)
+        request.httpMethod = "POST"
+
+
+        struct DeviceRequestData: Codable {
+            struct Attributes: Codable {
+                let name: String
+                let platform: String
+                let udid: String
+            }
+            
+            let data: Data
+            
+            struct Data: Codable {
+                let attributes: Attributes
+                let type: String
+            }
+        }
+
+        let requestData = DeviceRequestData(data: DeviceRequestData.Data(
+                                attributes: DeviceRequestData.Attributes(name: name, platform: platform, udid: udid),
+                                type: "devices"
+                            ))
+
+
+        let errorMessage = "Failed"
+
+
+        let jsonEncoder = JSONEncoder()
+        guard let jsonData = try? jsonEncoder.encode(requestData) else {
+            throw Error.unableToRegisterDevice(string: errorMessage) // or return an appropriate error
+        }
+
+        request.httpBody = jsonData
+
+        let tuple: (data: Data, _, statusCode: Int) = try network.executeWithStatusCode(request: request)
+
+        let responseBody = String(data: tuple.data, encoding: .utf8) ?? ""
+    
+        let error = String(tuple.statusCode) + "-" + (responseBody) 
+
+        if tuple.statusCode == 409 {
+            if responseBody.contains("ENTITY_ERROR.ATTRIBUTE.INVALID") {
+                if responseBody.contains("platform"){
+                    throw Error.unableToRegisterDevice(string: "Your platform name is an invalid value, try again with either IOS or MAC_OS!")}
+                else {
+                    throw Error.unableToRegisterDevice(string: "Your udid is an invalid value, try again with a different one!")}
+            }
+            else {
+                throw Error.unableToRegisterDevice(string: "Awesome this device is already registered, you are good to go!") }
+        }
+        else if tuple.statusCode == 400{
+            throw Error.unableToRegisterDevice(string: "The request is invalid and cannot be accepted.")
+        }
+        else if tuple.statusCode == 403{
+            throw Error.unableToRegisterDevice(string: "The request is not allowed. This can happen if your API key is revoked, your token is incorrectly formatted, or if the requested operation is not allowed.") }
+        
+        guard tuple.statusCode == 201 
+        else {
+            throw Error.unableToRegisterDevice(string: error)
+        }
+
+    }
+
+
 
     private func createITCApiJSONDecoder() -> JSONDecoder {
         let jsonDecoder: JSONDecoder = .init()

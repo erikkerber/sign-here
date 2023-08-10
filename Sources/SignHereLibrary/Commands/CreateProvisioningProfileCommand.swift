@@ -30,14 +30,7 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
         case unableToBase64DecodeCertificate(displayName: String)
         case unableToCreatePEM(output: ShellOutput)
         case unableToBase64DecodeProfile(name: String)
-        case unableToUpdateKeychainPartitionList(keychainName: String, output: ShellOutput)
-        case unableToImportP12IdentityIntoKeychain(
-            keychainName: String,
-            p12Identity: Path,
-            output: ShellOutput
-        )
         case unableToCreateCSR(output: ShellOutput)
-        case unableToImportIntermediaryAppleCertificate(certificate: String, output: ShellOutput)
 
         var description: String {
             switch self {
@@ -69,35 +62,9 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
                     [CreateProvisioningProfileCommand] Unable to base 64 decode profile
                     - Profile name: \(name)
                     """
-                case let .unableToUpdateKeychainPartitionList(keychainName: keychainName, output: output):
-                    return """
-                    [CreateProvisioningProfileCommand] Unable to update keychain partition list
-                    - Keychain Name: \(keychainName)
-                    - Output: \(output.outputString)
-                    - Error: \(output.errorString)
-                    """
-                case let .unableToImportP12IdentityIntoKeychain(
-                    keychainName: keychainName,
-                    p12Identity: p12Identity,
-                    output: output
-                ):
-                    return """
-                    [CreateProvisioningProfileCommand] Unable to import P12 identity into keychain
-                    - Keychain Name: \(keychainName)
-                    - P12 Identity: \(p12Identity)
-                    - Output: \(output.outputString)
-                    - Error: \(output.errorString)
-                    """
                 case let .unableToCreateCSR(output: output):
                     return """
                     [CreateProvisioningProfileCommand] Unable to create certificate signing request
-                    - Output: \(output.outputString)
-                    - Error: \(output.errorString)
-                    """
-                case let .unableToImportIntermediaryAppleCertificate(certificate: certificate, output: output):
-                    return """
-                    [CreateProvisioningProfileCommand] Unable to import Apple Intermediate Certificate
-                    - Certificate: \(certificate)
                     - Output: \(output.outputString)
                     - Error: \(output.errorString)
                     """
@@ -110,15 +77,12 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
         case issuerID = "issuerID"
         case privateKeyPath = "privateKeyPath"
         case itunesConnectKeyPath = "itunesConnectKeyPath"
-        case keychainName = "keychainName"
-        case keychainPassword = "keychainPassword"
         case bundleIdentifier = "bundleIdentifier"
         case bundleIdentifierName = "bundleIdentifierName"
         case profileType = "profileType"
         case certificateType = "certificateType"
         case outputPath = "outputPath"
         case opensslPath = "opensslPath"
-        case intermediaryAppleCertificates = "intermediaryAppleCertificates"
         case certificateSigningRequestSubject = "certificateSigningRequestSubject"
     }
 
@@ -133,12 +97,6 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
 
     @Option(help: "The path to the private key (https://developer.apple.com/documentation/appstoreconnectapi/generating_tokens_for_api_requests)")
     internal var itunesConnectKeyPath: String
-
-    @Option(help: "The name of the keychain to use to store fetched identities")
-    internal var keychainName: String
-
-    @Option(help: "The password of the keychain specified by --keychain-name")
-    internal var keychainPassword: String
 
     @Option(help: "The bundle identifier of the app for which you want to generate a provisioning profile for")
     internal var bundleIdentifier: String
@@ -157,9 +115,6 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
 
     @Option(help: "Path to the openssl executable, this is used to generate CSR signing artifacts that are required when creating certificates")
     internal var opensslPath: String
-
-    @Option(help: "Intermediary Apple Certificates that should also be added to the keychain (https://www.apple.com/certificateauthority/)")
-    internal var intermediaryAppleCertificates: [String]
 
     @Option(help: """
     Subject for the Certificate Signing Request when creating certificates.
@@ -209,14 +164,11 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
         issuerID: String,
         privateKeyPath: String,
         itunesConnectKeyPath: String,
-        keychainName: String,
-        keychainPassword: String,
         bundleIdentifier: String,
         profileType: String,
         certificateType: String,
         outputPath: String,
         opensslPath: String,
-        intermediaryAppleCertificates: [String],
         certificateSigningRequestSubject: String,
         bundleIdentifierName: String?
     ) {
@@ -230,14 +182,11 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
         self.issuerID = issuerID
         self.privateKeyPath = privateKeyPath
         self.itunesConnectKeyPath = itunesConnectKeyPath
-        self.keychainName = keychainName
-        self.keychainPassword = keychainPassword
         self.bundleIdentifier = bundleIdentifier
         self.profileType = profileType
         self.certificateType = certificateType
         self.outputPath = outputPath
         self.opensslPath = opensslPath
-        self.intermediaryAppleCertificates = intermediaryAppleCertificates
         self.certificateSigningRequestSubject = certificateSigningRequestSubject
         self.bundleIdentifierName = bundleIdentifierName
     }
@@ -263,14 +212,11 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
             issuerID: try container.decode(String.self, forKey: .issuerID),
             privateKeyPath: try container.decode(String.self, forKey: .privateKeyPath),
             itunesConnectKeyPath: try container.decode(String.self, forKey: .itunesConnectKeyPath),
-            keychainName: try container.decode(String.self, forKey: .keychainName),
-            keychainPassword: try container.decode(String.self, forKey: .keychainPassword),
             bundleIdentifier: try container.decode(String.self, forKey: .bundleIdentifier),
             profileType: try container.decode(String.self, forKey: .profileType),
             certificateType: try container.decode(String.self, forKey: .certificateType),
             outputPath: try container.decode(String.self, forKey: .outputPath),
             opensslPath: try container.decode(String.self, forKey: .opensslPath),
-            intermediaryAppleCertificates: try container.decodeIfPresent([String].self, forKey: .intermediaryAppleCertificates) ?? [],
             certificateSigningRequestSubject: try container.decode(String.self, forKey: .certificateSigningRequestSubject),
             bundleIdentifierName: try container.decodeIfPresent(String.self, forKey: .bundleIdentifierName)
         )
@@ -284,19 +230,17 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
             issuerID: issuerID,
             secretKey: try files.read(Path(itunesConnectKeyPath))
         )
-        let tuple: (cer: Path, certificateId: String) = try fetchOrCreateCertificate(jsonWebToken: jsonWebToken, csr: csr)
-        let cer: Path = tuple.cer
+        let fileManager = FileManager.default
+        do{
+            if !fileManager.fileExists(atPath: outputPath) {
+                try fileManager.createDirectory(atPath: outputPath, withIntermediateDirectories: true, attributes: nil)
+        }
+        } catch {
+            print("Error: \(error)")
+        }
+
+        let tuple: (cer: Path, certificateId: String) = try fetchOrCreateCertificate(jsonWebToken: jsonWebToken, csr: csr, outputPath: outputPath)
         let certificateId: String = tuple.certificateId
-        let pem: Path = try createPEM(cer: cer)
-        let identityPassword: String = uuid.make()
-        let p12Identity: Path = try createP12Identity(
-            pem: pem,
-            privateKey: privateKey,
-            identityPassword: identityPassword
-        )
-        try importP12IdentityIntoKeychain(p12Identity: p12Identity, identityPassword: identityPassword)
-        try importIntermediaryAppleCertificates()
-        try updateKeychainPartitionList()
         let deviceIDs: Set<String> = try iTunesConnectService.fetchITCDeviceIDs(jsonWebToken: jsonWebToken)
         let profileResponse: CreateProfileResponse = try iTunesConnectService.createProfile(
             jsonWebToken: jsonWebToken,
@@ -313,8 +257,25 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
         else {
             throw Error.unableToBase64DecodeProfile(name: profileResponse.data.attributes.name)
         }
-        try files.write(profileData, to: .init(outputPath))
-        log.append(profileResponse.data.id)
+
+    //    let fileManager = FileManager.default
+        let filePath = "\(outputPath)/\(profileResponse.data.attributes.uuid).mobileprovision"
+        print(filePath)
+        // do{
+        //     if !fileManager.fileExists(atPath: outputPath) {
+        //         try fileManager.createDirectory(atPath: outputPath, withIntermediateDirectories: true, attributes: nil)
+        // }
+        try files.write(profileData, to: .init(filePath))
+        // } catch {
+        //     print("Error: \(error)")
+        // }
+        // let newPath: String = outputPath + profileResponse.data.attributes.uuid + ".mobileprovision" 
+        // print(newPath)
+        // try files.write(profileData, to: .init(newPath))
+        log.append("cer: " + certificateId)
+        log.append("uuid: " +  profileResponse.data.attributes.uuid)
+        log.append("profileContent: " + profileResponse.data.attributes.profileContent)
+        
     }
 
     private func createCSR(privateKey: Path) throws -> Path {
@@ -338,7 +299,8 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
 
     private func fetchOrCreateCertificate(
         jsonWebToken: String,
-        csr: Path
+        csr: Path,
+        outputPath: String
     ) throws -> (cer: Path, certificateId: String) {
         let cer: Path
         let certificateId: String
@@ -353,8 +315,9 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
                 throw Error.unableToBase64DecodeCertificate(displayName: fetchedActiveCertificate.attributes.displayName)
             }
             cer = try files.uniqueTemporaryPath() + "\(fetchedActiveCertificate.id).cer"
-            try files.write(data, to: cer)
             certificateId = fetchedActiveCertificate.id
+            let filePath = "\(outputPath)/\(certificateId).cer"
+            try files.write(data, to: .init(filePath))
         } else {
             let createCertificateResponse: CreateCertificateResponse = try iTunesConnectService.createCertificate(
                 jsonWebToken: jsonWebToken,
@@ -368,6 +331,8 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
             cer = try files.uniqueTemporaryPath() + "\(createCertificateResponse.data.id).cer"
             try files.write(cerData, to: cer)
             certificateId = createCertificateResponse.data.id
+            let filePath = "\(outputPath)/\(certificateId).cer"
+            try files.write(cerData, to: .init(filePath))
         }
         return (cer: cer, certificateId: certificateId)
     }
@@ -415,63 +380,4 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
         return p12Output
     }
 
-    private func importP12IdentityIntoKeychain(p12Identity: Path, identityPassword: String) throws {
-        let output: ShellOutput = shell.execute([
-            "security",
-            "import",
-            p12Identity.string,
-            "-k",
-            keychainName,
-            "-P",
-            identityPassword,
-            "-T",
-            "/usr/bin/codesign"
-        ])
-        guard output.isSuccessful
-        else {
-           throw Error.unableToImportP12IdentityIntoKeychain(
-               keychainName: keychainName,
-               p12Identity: p12Identity,
-               output: output
-           )
-        }
-    }
-
-    private func importIntermediaryAppleCertificates() throws {
-        for cert in intermediaryAppleCertificates {
-            let output: ShellOutput = shell.execute([
-                "security",
-                "import",
-                cert,
-                "-k",
-                keychainName,
-                "-T",
-                "/usr/bin/codesign"
-            ])
-            guard output.isSuccessful
-            else {
-                throw Error.unableToImportIntermediaryAppleCertificate(certificate: cert, output: output)
-            }
-        }
-    }
-
-    private func updateKeychainPartitionList() throws {
-        let output: ShellOutput = shell.execute([
-            "security",
-            "set-key-partition-list",
-            "-S",
-            "apple-tool:,apple:,codesign:",
-            "-s",
-            "-k",
-            keychainPassword,
-            keychainName
-        ])
-        guard output.isSuccessful
-        else {
-           throw Error.unableToUpdateKeychainPartitionList(
-               keychainName: keychainName,
-               output: output
-           )
-        }
-    }
-}
+ }

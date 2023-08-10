@@ -1,8 +1,8 @@
 //
-//  DeleteProvisioningProfileCommand.swift
+//  RegisterDeviceCommand.swift
 //  Commands
 //
-//  Created by Maxwell Elliott on 04/24/23.
+//  Created by Pranavi Gupta on 07/11/23.
 //
 
 import ArgumentParser
@@ -10,28 +10,31 @@ import CoreLibrary
 import Foundation
 import PathKit
 
-internal struct DeleteProvisioningProfileCommand: ParsableCommand {
+internal struct RegisterDeviceCommand: ParsableCommand {
 
     internal static var configuration: CommandConfiguration =
-        .init(commandName: "delete-provisioning-profile",
-              abstract: "Use this command to delete a provisioning profile using its iTunes Connect API ID",
+        .init(commandName: "register-device",
+              abstract: "Use this command to register a device using its udid",
               discussion: """
-              This command can be used in conjunction with the `create-provisioning-profile` command to create and delete provisioning profiles.
               """)
 
     private enum CodingKeys: String, CodingKey {
-        case bundleIdentifier = "bundleIdentifier"
-        case bundleIdentifierName = "bundleIdentifierName"
+        case platform = "platform"
+        case name = "name"
+        case udid = "udid"
         case keyIdentifier = "keyIdentifier"
         case issuerID = "issuerID"
         case itunesConnectKeyPath = "itunesConnectKeyPath"
     }
 
-    @Option(help: "The bundle identifier of the app for which you want to delete a provisioning profile for")
-    internal var bundleIdentifier: String
+    @Option(help: "The operating system intended for the bundle: IOS or MAC_OS (https://developer.apple.com/documentation/appstoreconnectapi/bundleidplatform)")
+    internal var platform: String
 
-    @Option(help: "The bundle identifier name for the desired bundle identifier, this is optional but if it is not set the logic will select the first bundle id it finds that matches `--bundle-identifier`")
-    internal var bundleIdentifierName: String?
+    @Option(help: "Your Name's Device (example: John's iPhone 13)")
+    internal var name: String
+
+    @Option(help: "The device's UDID")
+    internal var udid: String
 
     @Option(help: "The key identifier of the private key (https://developer.apple.com/documentation/appstoreconnectapi/generating_tokens_for_api_requests)")
     internal var keyIdentifier: String
@@ -62,20 +65,22 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
         files: Files,
         jsonWebTokenService: JSONWebTokenService,
         iTunesConnectService: iTunesConnectService,
-        bundleIdentifier: String,   
+        platform: String,
+        name: String,
+        udid: String,
         keyIdentifier: String,
         issuerID: String,
-        itunesConnectKeyPath: String,
-        bundleIdentifierName: String?
+        itunesConnectKeyPath: String
     ) {
         self.files = files
         self.jsonWebTokenService = jsonWebTokenService
         self.iTunesConnectService = iTunesConnectService
-        self.bundleIdentifier = bundleIdentifier
+        self.platform = platform
+        self.name = name
+        self.udid = udid
         self.keyIdentifier = keyIdentifier
         self.issuerID = issuerID
         self.itunesConnectKeyPath = itunesConnectKeyPath
-        self.bundleIdentifierName = bundleIdentifierName
     }
 
     internal init(from decoder: Decoder) throws {
@@ -90,11 +95,12 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
                 shell: ShellImp(),
                 clock: ClockImp()
             ),
-            bundleIdentifier: try container.decode(String.self, forKey: .bundleIdentifier),
+            platform: try container.decode(String.self, forKey: .platform),
+            name: try container.decode(String.self, forKey: .name),
+            udid: try container.decode(String.self, forKey: .udid),
             keyIdentifier: try container.decode(String.self, forKey: .keyIdentifier),
             issuerID: try container.decode(String.self, forKey: .issuerID),
-            itunesConnectKeyPath: try container.decode(String.self, forKey: .itunesConnectKeyPath),
-            bundleIdentifierName: try container.decodeIfPresent(String.self, forKey: .bundleIdentifierName)
+            itunesConnectKeyPath: try container.decode(String.self, forKey: .itunesConnectKeyPath)
         )
     }
 
@@ -104,20 +110,11 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
             issuerID: issuerID,
             secretKey: try files.read(Path(itunesConnectKeyPath))
         )
-        let profileIDs: Set<String> =
-            try iTunesConnectService.fetchProfileIdsfromBundleIds(
-                jsonWebToken: jsonWebToken,  
-                id: try iTunesConnectService.determineBundleIdITCId(
-                        jsonWebToken: jsonWebToken,
-                        bundleIdentifier: bundleIdentifier,
-                        bundleIdentifierName: bundleIdentifierName
-                    )
-            )
-        for profile in profileIDs {
-            try iTunesConnectService.deleteProvisioningProfile(
-                jsonWebToken: jsonWebToken,
-                id: profile        
-            )
-        }
+        try iTunesConnectService.registerDevice(
+            jsonWebToken: jsonWebToken,
+            platform: platform,
+            name: name,
+            udid: udid
+        )
     }
 }
