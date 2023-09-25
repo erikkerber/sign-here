@@ -35,6 +35,7 @@ internal protocol iTunesConnectService {
     func createProfile(
         jsonWebToken: String,
         bundleId: String,
+        bundleIdentifier: String,
         certificateId: String,
         deviceIDs: Set<String>,
         profileType: String
@@ -359,6 +360,7 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
     func createProfile(
         jsonWebToken: String,
         bundleId: String,
+        bundleIdentifier: String,
         certificateId: String,
         deviceIDs: Set<String>,
         profileType: String
@@ -373,7 +375,9 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
         request.setValue(Constants.applicationJSONHeaderValue, forHTTPHeaderField: Constants.contentTypeHeaderName)
         request.setValue("Bearer \(jsonWebToken)", forHTTPHeaderField: "Authorization")
         request.httpMethod = "POST"
-        let profileName: String = "\(certificateId)_\(profileType)_\(clock.now().timeIntervalSince1970)"
+        // let profileName: String = "\(certificateId)_\(profileType)_\(clock.now().timeIntervalSince1970)"
+        let profileName: String = "API Created Profile: \(bundleIdentifier)"
+
         var devices: CreateProfileRequest.CreateProfileRequestData.Relationships.Devices? = nil
         // ME: App Store profiles cannot use UDIDs
         if !["IOS_APP_STORE", "MAC_APP_STORE", "TVOS_APP_STORE", "MAC_CATALYST_APP_STORE"].contains(profileType) {

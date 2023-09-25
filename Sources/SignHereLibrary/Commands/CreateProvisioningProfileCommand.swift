@@ -249,6 +249,7 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
                 bundleIdentifier: bundleIdentifier,
                 bundleIdentifierName: bundleIdentifierName
             ),
+            bundleIdentifier: bundleIdentifier,
             certificateId: certificateId,
             deviceIDs: deviceIDs,
             profileType: profileType
@@ -258,20 +259,9 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
             throw Error.unableToBase64DecodeProfile(name: profileResponse.data.attributes.name)
         }
 
-    //    let fileManager = FileManager.default
-        let filePath = "\(outputPath)/\(profileResponse.data.attributes.uuid).mobileprovision"
-        print(filePath)
-        // do{
-        //     if !fileManager.fileExists(atPath: outputPath) {
-        //         try fileManager.createDirectory(atPath: outputPath, withIntermediateDirectories: true, attributes: nil)
-        // }
+        let filePath = "\(outputPath)/\(bundleIdentifier)-\(profileType).mobileprovision"
         try files.write(profileData, to: .init(filePath))
-        // } catch {
-        //     print("Error: \(error)")
-        // }
-        // let newPath: String = outputPath + profileResponse.data.attributes.uuid + ".mobileprovision" 
-        // print(newPath)
-        // try files.write(profileData, to: .init(newPath))
+
         log.append("cer: " + certificateId)
         log.append("uuid: " +  profileResponse.data.attributes.uuid)
         log.append("profileContent: " + profileResponse.data.attributes.profileContent)
