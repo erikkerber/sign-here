@@ -437,11 +437,7 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
         urlComponents.scheme = Constants.httpsScheme
         urlComponents.host = Constants.itcHost
         urlComponents.path = "/v1/bundleIds/\(id)/profiles"
-        // urlComponents.queryItems = [
-        //     .init(name: "filter[profileType]", value: "IOS_DEVELOPMENT"),
-        //     .init(name: "filter[platform]", value: "IOS"),                         
-        //     .init(name: "limit", value: "200")
-        // ]
+
         guard let url: URL = urlComponents.url
         else {
             throw Error.unableToCreateURL(urlComponents: urlComponents)
@@ -466,14 +462,10 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
             while let next: String = response.links.next,
                 let nextURL: URL = .init(string: next) {
                 response = try performPagedRequest(url: nextURL, jsonWebToken: jsonWebToken)
-                // if (response.data[profileType] == "IOS_APP_DEVELOPMENT" || response.data == "IOS_APP_ADHOC" ){
-                //     profileData.append(contentsOf: response.data)
-                // }
                 profileData.append(contentsOf: response.data)
-                profileData = 
-                    profileData.filter { 
-                    profile in 
-                        return profile.attributes.profileType == "IOS_APP_DEVELOPMENT" || profile.attributes.profileType == "IOS_IOS_APP_ADHOC" }
+            }
+            profileData = profileData.filter { profile in
+                return profile.attributes.profileType == "IOS_APP_DEVELOPMENT"
             }
             return .init(profileData.map { profile in
                 profile.id

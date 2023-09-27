@@ -262,9 +262,9 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
         let filePath = "\(outputPath)/\(bundleIdentifier)-\(profileType).mobileprovision"
         try files.write(profileData, to: .init(filePath))
 
-        log.append("cer: " + certificateId)
-        log.append("uuid: " +  profileResponse.data.attributes.uuid)
-        log.append("profileContent: " + profileResponse.data.attributes.profileContent)
+        // log.append("cer: " + certificateId)
+        // log.append("uuid: " +  profileResponse.data.attributes.uuid)
+        // log.append("profileContent: " + profileResponse.data.attributes.profileContent)
         
     }
 
