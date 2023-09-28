@@ -40,9 +40,10 @@ internal protocol iTunesConnectService {
         deviceIDs: Set<String>,
         profileType: String
     ) throws -> CreateProfileResponse
-    func fetchProfileIdsfromBundleIds(
+    func fetchProfileIdsfromBundleId(
         jsonWebToken: String,
-        id: String
+        id: String,
+        profileType: String
     ) throws -> Set<String>
     func deleteProvisioningProfile(
         jsonWebToken: String,
@@ -429,9 +430,10 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
     }
 
 
-    func fetchProfileIdsfromBundleIds(
+    func fetchProfileIdsfromBundleId(
         jsonWebToken: String,
-        id: String     
+        id: String,
+        profileType: String
     ) throws -> Set<String> {
         var urlComponents: URLComponents = .init()
         urlComponents.scheme = Constants.httpsScheme
@@ -465,7 +467,7 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
                 profileData.append(contentsOf: response.data)
             }
             profileData = profileData.filter { profile in
-                return profile.attributes.profileType == "IOS_APP_DEVELOPMENT"
+                return profile.attributes.profileType == profileType
             }
             return .init(profileData.map { profile in
                 profile.id
