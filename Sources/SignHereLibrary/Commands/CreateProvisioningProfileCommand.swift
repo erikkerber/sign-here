@@ -259,7 +259,7 @@ internal struct CreateProvisioningProfileCommand: ParsableCommand {
             throw Error.unableToBase64DecodeProfile(name: profileResponse.data.attributes.name)
         }
 
-        let filePath = "\(outputPath)/\(bundleIdentifier)-\(profileType).mobileprovision"
+        let filePath = "\(outputPath)/\(profileResponse.data.attributes.uuid).mobileprovision"
         try files.write(profileData, to: .init(filePath))
 
         // log.append("cer: " + certificateId)
