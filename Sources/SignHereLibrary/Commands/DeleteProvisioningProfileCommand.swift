@@ -25,6 +25,7 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
         case keyIdentifier = "keyIdentifier"
         case issuerID = "issuerID"
         case itunesConnectKeyPath = "itunesConnectKeyPath"
+        case profileType = "profileType"
     }
 
     @Option(help: "The bundle identifier of the app for which you want to delete a provisioning profile for")
@@ -41,6 +42,9 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
 
     @Option(help: "The path to the private key (https://developer.apple.com/documentation/appstoreconnectapi/generating_tokens_for_api_requests)")
     internal var itunesConnectKeyPath: String
+
+    @Option(help: "The profile type which you wish to delete (https://developer.apple.com/documentation/appstoreconnectapi/profile/attributes)")
+    internal var profileType: String
 
     private let files: Files
     private let jsonWebTokenService: JSONWebTokenService
@@ -66,6 +70,7 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
         keyIdentifier: String,
         issuerID: String,
         itunesConnectKeyPath: String,
+        profileType: String,
         bundleIdentifierName: String?
     ) {
         self.files = files
@@ -75,6 +80,7 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
         self.keyIdentifier = keyIdentifier
         self.issuerID = issuerID
         self.itunesConnectKeyPath = itunesConnectKeyPath
+        self.profileType = profileType
         self.bundleIdentifierName = bundleIdentifierName
     }
 
@@ -94,6 +100,7 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
             keyIdentifier: try container.decode(String.self, forKey: .keyIdentifier),
             issuerID: try container.decode(String.self, forKey: .issuerID),
             itunesConnectKeyPath: try container.decode(String.self, forKey: .itunesConnectKeyPath),
+            profileType: try container.decode(String.self, forKey: .profileType),
             bundleIdentifierName: try container.decodeIfPresent(String.self, forKey: .bundleIdentifierName)
         )
     }
@@ -105,13 +112,14 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
             secretKey: try files.read(Path(itunesConnectKeyPath))
         )
         let profileIDs: Set<String> =
-            try iTunesConnectService.fetchProfileIdsfromBundleIds(
+            try iTunesConnectService.fetchProfileIdsfromBundleId(
                 jsonWebToken: jsonWebToken,  
                 id: try iTunesConnectService.determineBundleIdITCId(
                         jsonWebToken: jsonWebToken,
                         bundleIdentifier: bundleIdentifier,
                         bundleIdentifierName: bundleIdentifierName
-                    )
+                    ),
+                profileType: profileType
             )
         for profile in profileIDs {
             try iTunesConnectService.deleteProvisioningProfile(

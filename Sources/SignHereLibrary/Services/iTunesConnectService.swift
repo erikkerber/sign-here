@@ -35,13 +35,15 @@ internal protocol iTunesConnectService {
     func createProfile(
         jsonWebToken: String,
         bundleId: String,
+        bundleIdentifier: String,
         certificateId: String,
         deviceIDs: Set<String>,
         profileType: String
     ) throws -> CreateProfileResponse
-    func fetchProfileIdsfromBundleIds(
+    func fetchProfileIdsfromBundleId(
         jsonWebToken: String,
-        id: String
+        id: String,
+        profileType: String
     ) throws -> Set<String>
     func deleteProvisioningProfile(
         jsonWebToken: String,
@@ -359,6 +361,7 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
     func createProfile(
         jsonWebToken: String,
         bundleId: String,
+        bundleIdentifier: String,
         certificateId: String,
         deviceIDs: Set<String>,
         profileType: String
@@ -373,7 +376,9 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
         request.setValue(Constants.applicationJSONHeaderValue, forHTTPHeaderField: Constants.contentTypeHeaderName)
         request.setValue("Bearer \(jsonWebToken)", forHTTPHeaderField: "Authorization")
         request.httpMethod = "POST"
-        let profileName: String = "\(certificateId)_\(profileType)_\(clock.now().timeIntervalSince1970)"
+        // let profileName: String = "\(certificateId)_\(profileType)_\(clock.now().timeIntervalSince1970)"
+        let profileName: String = "API Created Profile: \(bundleIdentifier)"
+
         var devices: CreateProfileRequest.CreateProfileRequestData.Relationships.Devices? = nil
         // ME: App Store profiles cannot use UDIDs
         if !["IOS_APP_STORE", "MAC_APP_STORE", "TVOS_APP_STORE", "MAC_CATALYST_APP_STORE"].contains(profileType) {
@@ -425,19 +430,16 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
     }
 
 
-    func fetchProfileIdsfromBundleIds(
+    func fetchProfileIdsfromBundleId(
         jsonWebToken: String,
-        id: String     
+        id: String,
+        profileType: String
     ) throws -> Set<String> {
         var urlComponents: URLComponents = .init()
         urlComponents.scheme = Constants.httpsScheme
         urlComponents.host = Constants.itcHost
         urlComponents.path = "/v1/bundleIds/\(id)/profiles"
-        // urlComponents.queryItems = [
-        //     .init(name: "filter[profileType]", value: "IOS_DEVELOPMENT"),
-        //     .init(name: "filter[platform]", value: "IOS"),                         
-        //     .init(name: "limit", value: "200")
-        // ]
+
         guard let url: URL = urlComponents.url
         else {
             throw Error.unableToCreateURL(urlComponents: urlComponents)
@@ -462,14 +464,10 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
             while let next: String = response.links.next,
                 let nextURL: URL = .init(string: next) {
                 response = try performPagedRequest(url: nextURL, jsonWebToken: jsonWebToken)
-                // if (response.data[profileType] == "IOS_APP_DEVELOPMENT" || response.data == "IOS_APP_ADHOC" ){
-                //     profileData.append(contentsOf: response.data)
-                // }
                 profileData.append(contentsOf: response.data)
-                profileData = 
-                    profileData.filter { 
-                    profile in 
-                        return profile.attributes.profileType == "IOS_APP_DEVELOPMENT" || profile.attributes.profileType == "IOS_IOS_APP_ADHOC" }
+            }
+            profileData = profileData.filter { profile in
+                return profile.attributes.profileType == profileType
             }
             return .init(profileData.map { profile in
                 profile.id
