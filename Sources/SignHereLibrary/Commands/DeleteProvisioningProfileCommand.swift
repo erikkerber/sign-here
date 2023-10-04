@@ -119,7 +119,8 @@ internal struct DeleteProvisioningProfileCommand: ParsableCommand {
                         bundleIdentifier: bundleIdentifier,
                         bundleIdentifierName: bundleIdentifierName
                     ),
-                profileType: profileType
+                profileType: profileType,
+                bundleIdentifier: bundleIdentifier
             )
         for profile in profileIDs {
             try iTunesConnectService.deleteProvisioningProfile(

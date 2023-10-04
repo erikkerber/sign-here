@@ -91,3 +91,8 @@ iOSInjectionProject/
 
 bazel-*
 .DS_Store
+
+# Project-specific
+*.p8
+*.p12
+Tools/_provisioning_output/

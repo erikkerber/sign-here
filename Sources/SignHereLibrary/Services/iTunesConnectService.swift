@@ -43,7 +43,8 @@ internal protocol iTunesConnectService {
     func fetchProfileIdsfromBundleId(
         jsonWebToken: String,
         id: String,
-        profileType: String
+        profileType: String,
+        bundleIdentifier: String
     ) throws -> Set<String>
     func deleteProvisioningProfile(
         jsonWebToken: String,
@@ -376,7 +377,6 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
         request.setValue(Constants.applicationJSONHeaderValue, forHTTPHeaderField: Constants.contentTypeHeaderName)
         request.setValue("Bearer \(jsonWebToken)", forHTTPHeaderField: "Authorization")
         request.httpMethod = "POST"
-        // let profileName: String = "\(certificateId)_\(profileType)_\(clock.now().timeIntervalSince1970)"
         let profileName: String = "API Created Profile: \(bundleIdentifier)"
 
         var devices: CreateProfileRequest.CreateProfileRequestData.Relationships.Devices? = nil
@@ -433,7 +433,8 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
     func fetchProfileIdsfromBundleId(
         jsonWebToken: String,
         id: String,
-        profileType: String
+        profileType: String,
+        bundleIdentifier: String
     ) throws -> Set<String> {
         var urlComponents: URLComponents = .init()
         urlComponents.scheme = Constants.httpsScheme
@@ -466,9 +467,8 @@ internal class iTunesConnectServiceImp: iTunesConnectService {
                 response = try performPagedRequest(url: nextURL, jsonWebToken: jsonWebToken)
                 profileData.append(contentsOf: response.data)
             }
-            profileData = profileData.filter { profile in
-                return profile.attributes.profileType == profileType
-            }
+            profileData = profileData.filter { $0.attributes.profileType == profileType && $0.attributes.name == "API Created Profile: \(bundleIdentifier)" }
+
             return .init(profileData.map { profile in
                 profile.id
             })
